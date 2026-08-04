@@ -75,6 +75,7 @@ export default {
     // e.g., /mcp/SECRET -> /mcp, /mcp/SECRET/sse -> /mcp/sse
     const cleanPath = "/mcp" + (pathParts.length > 2 ? "/" + pathParts.slice(2).join("/") : "");
     const cleanUrl = new URL(cleanPath, url.origin);
+    cleanUrl.search = url.search;
     const cleanRequest = new Request(cleanUrl, request);
 
     return (
