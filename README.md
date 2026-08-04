@@ -292,3 +292,7 @@ Apache-2.0 License
 ---
 
 For more information, see the full [Motion API docs](https://docs.usemotion.com/) or [Model Context Protocol docs](https://modelcontextprotocol.io/docs/).
+
+## Fork pin
+
+Pinned to upstream devondragon/MotionMCP commit c79dea5f (2026-03-05). Do not auto-update. Upstream releases surface via Switchboard /health Check 9 as roadmap items.
