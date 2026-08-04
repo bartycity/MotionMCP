@@ -35,7 +35,12 @@ export class MotionMCPAgent extends McpAgent<Env> {
       registry
     );
     const enabledTools = configurator.getEnabledTools();
-    validator.initializeValidators(enabledTools);
+    // NOTE: We deliberately do NOT call validator.initializeValidators() here.
+    // AJV compiles each schema via `new Function(...)`, which the Workers runtime
+    // forbids ("Code generation from strings disallowed"). In the Worker path,
+    // input validation is already handled by the Zod shape each tool is registered
+    // with (jsonSchemaToZodShape) plus the McpServer's CfWorkerJsonSchemaValidator,
+    // and no handler calls validator.validateInput() — only the stdio server does.
 
     for (const tool of enabledTools) {
       const zodShape = jsonSchemaToZodShape(tool.inputSchema as Parameters<typeof jsonSchemaToZodShape>[0]);
@@ -79,8 +84,12 @@ export default {
     cleanUrl.search = url.search;
     const cleanRequest = new Request(cleanUrl, request);
 
+    // Streamable-HTTP transport (single /mcp endpoint; session rides the
+    // mcp-session-id header, so the secret path segment survives the whole
+    // session). Replaces legacy SSE (.mount), whose endpoint event advertised
+    // a message URL without the secret segment — broken for secret-in-path auth.
     return (
-      MotionMCPAgent.mount("/mcp") as { fetch: (req: Request, env: Env, ctx: ExecutionContext) => Promise<Response> }
+      MotionMCPAgent.serve("/mcp") as { fetch: (req: Request, env: Env, ctx: ExecutionContext) => Promise<Response> }
     ).fetch(cleanRequest, env, ctx);
   },
 };
