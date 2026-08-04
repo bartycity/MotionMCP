@@ -13,7 +13,7 @@ tag = "v1"
 new_sqlite_classes = ["MotionMCPAgent"]
 
 [vars]
-MOTION_MCP_TOOLS = "custom:motion_tasks,motion_projects,motion_workspaces,motion_recurring_tasks,motion_search"
+MOTION_MCP_TOOLS = "complete"
 
 # Secrets set via wrangler:
 #   npx wrangler secret put MOTION_API_KEY
