@@ -295,4 +295,4 @@ For more information, see the full [Motion API docs](https://docs.usemotion.com/
 
 ## Fork pin
 
-Pinned to upstream devondragon/MotionMCP commit c79dea5f (2026-03-05). Do not auto-update. Upstream releases surface via Switchboard /health Check 9 as roadmap items.
+Pinned to upstream devondragon/MotionMCP commit c79dea5f (2026-03-05). Do not auto-update. Upstream releases are reviewed and adopted deliberately, never auto-merged.
