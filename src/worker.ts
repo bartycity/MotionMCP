@@ -7,6 +7,7 @@ import { HandlerFactory } from "./handlers/HandlerFactory";
 import { ToolRegistry, ToolConfigurator } from "./tools";
 import { jsonSchemaToZodShape } from "./utils/jsonSchemaToZod";
 import { SERVER_INSTRUCTIONS } from "./utils/serverInstructions";
+import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/cfworker-provider.js";
 
 interface Env {
   MOTION_API_KEY: string;
@@ -18,7 +19,7 @@ interface Env {
 export class MotionMCPAgent extends McpAgent<Env> {
   server = new McpServer(
     { name: "motion-mcp-server", version: "2.8.0" },
-    { instructions: SERVER_INSTRUCTIONS },
+    { instructions: SERVER_INSTRUCTIONS, jsonSchemaValidator: new CfWorkerJsonSchemaValidator() },
   );
 
   async init() {
