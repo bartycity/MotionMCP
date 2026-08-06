@@ -1,5 +1,8 @@
 name = "motion-mcp-server"
-main = "src/worker.ts"
+# Entry point is the OAuth wrapper (local file, not upstream). It re-exports
+# the MotionMCPAgent Durable Object and wraps the MCP handler; worker.ts
+# itself is unmodified upstream-adjacent code. See src/oauth.ts header.
+main = "src/oauth.ts"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat"]
 
@@ -15,6 +18,16 @@ new_sqlite_classes = ["MotionMCPAgent"]
 [vars]
 MOTION_MCP_TOOLS = "complete"
 
+# OAuth token/client storage (workers-oauth-provider). Tokens, codes, and
+# client secrets are stored hashed; props encrypted. Created 6 Aug 2026.
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "ad9c31bd548f4f828cf80bc95154c666"
+
 # Secrets set via wrangler:
 #   npx wrangler secret put MOTION_API_KEY
 #   npx wrangler secret put MOTION_MCP_SECRET
+
+[observability]
+enabled = true
+head_sampling_rate = 1
