@@ -45,6 +45,8 @@ MOTION_API_KEY=your_api_key npx motionmcp
 
 ### Remote Setup (Cloudflare Workers)
 
+> **Note (this fork):** the secret-in-URL scheme documented below is upstream's design. This fork replaces it with OAuth 2.1 — see [Fork notes](#fork-notes) at the bottom.
+
 For mobile and web clients — Claude mobile/web, ChatGPT mobile/web, or any HTTP MCP client.
 
 #### One-click deploy
@@ -293,6 +295,16 @@ Apache-2.0 License
 
 For more information, see the full [Motion API docs](https://docs.usemotion.com/) or [Model Context Protocol docs](https://modelcontextprotocol.io/docs/).
 
-## Fork pin
+## Fork notes
 
-Pinned to upstream devondragon/MotionMCP commit c79dea5f (2026-03-05). Do not auto-update. Upstream releases are reviewed and adopted deliberately, never auto-merged.
+**Pin:** pinned to upstream devondragon/MotionMCP commit c79dea5f (2026-03-05). Do not auto-update. Upstream releases are reviewed and adopted deliberately, never auto-merged.
+
+**Divergences from upstream, in order applied:**
+
+1. **`wrangler.toml`: `new_classes` → `new_sqlite_classes`** — required for the Durable Object migration to deploy on the Workers free plan.
+2. **AJV codegen removed from the Worker path** (commit 08be6ff) — the DO's `init()` reached `ajv.compile()` → `new Function`, which the Workers runtime forbids; the worker went silent. Validation is covered by the per-tool Zod shapes and the SDK's CfWorker validator.
+3. **Transport: legacy SSE `mount()` → streamable-HTTP `serve("/mcp")`** — SSE's endpoint event advertised a message URL that broke path-based auth.
+4. **`[observability]` enabled** (`head_sampling_rate = 1`) — without it the worker keeps no request log, and a write's outcome is undeterminable after a client disconnect.
+5. **OAuth 2.1 replaces secret-in-URL auth** (commit d88138e, Aug 2026). The entire auth layer lives in one added file, `src/oauth.ts`, wrapping the untouched MCP handler via [`@cloudflare/workers-oauth-provider`](https://github.com/cloudflare/workers-oauth-provider): Dynamic Client Registration at `/register`, a single-user password-gated consent screen at `/authorize`, token issue/refresh at `/token` (S256 PKCE, refresh rotation), tokens stored hashed in a KV namespace (`OAUTH_KV`). The MCP endpoint is plain `/mcp` behind bearer auth — the URL is no longer a credential. Motivation: any client that renders connector metadata renders a secret-in-URL credential; one exposure through a client's visible-reasoning transcript was enough. `MOTION_MCP_SECRET` survives as the consent-screen password.
+
+`src/oauth.ts` upstreams cleanly if wanted — it adds one file, one `tsconfig.json` exclude line, and config; `worker.ts` and all handlers are unmodified.
