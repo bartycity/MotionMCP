@@ -388,6 +388,31 @@ describe('createUserFacingError', () => {
     expect(err.userMessage).toContain('(ID: task-789)');
   });
 
+  it('appends Motion\'s reason to a 400, joining an array of field errors', () => {
+    const axiosErr = fakeAxiosError(400);
+    (axiosErr.response as { data: unknown }).data = {
+      message: ['property projectId should not exist', 'idealTime should be in the form of HH:00|30 am|pm'],
+    };
+    const err = createUserFacingError(axiosErr, createErrorContext('create', 'recurring task', undefined, 'Weekly'));
+
+    expect(err.userMessage).toContain('The request was invalid.');
+    expect(err.userMessage).toContain('Motion said: property projectId should not exist; idealTime should be in the form of HH:00|30 am|pm');
+    expect(err.code).toBe(ERROR_CODES.INVALID_PARAMETERS);
+  });
+
+  it('appends a string reason to a 400 and keeps the generic text when there is none', () => {
+    const withReason = fakeAxiosError(400);
+    (withReason.response as { data: unknown }).data = { message: 'dueDate is required' };
+    expect(createUserFacingError(withReason, createErrorContext('create', 'task')).userMessage)
+      .toContain('Motion said: dueDate is required');
+
+    const without = fakeAxiosError(400);
+    (without.response as { data: unknown }).data = {};
+    const msg = createUserFacingError(without, createErrorContext('create', 'task')).userMessage;
+    expect(msg).toContain('The request was invalid.');
+    expect(msg).not.toContain('Motion said');
+  });
+
   it('propagates statusCode from Axios error', () => {
     const err = createUserFacingError(fakeAxiosError(429), createErrorContext('fetch', 'task'));
     expect(err.statusCode).toBe(429);

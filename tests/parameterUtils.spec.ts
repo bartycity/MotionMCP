@@ -147,3 +147,27 @@ describe('parameterUtils', () => {
     });
   });
 });
+
+describe('normalizeIdealTime', () => {
+  it('converts 24-hour values to the 12-hour form Motion accepts', async () => {
+    const { normalizeIdealTime } = await import('../src/utils/parameterUtils');
+    expect(normalizeIdealTime('09:00')).toBe('9:00 am');
+    expect(normalizeIdealTime('00:30')).toBe('12:30 am');
+    expect(normalizeIdealTime('12:00')).toBe('12:00 pm');
+    expect(normalizeIdealTime('21:30')).toBe('9:30 pm');
+  });
+
+  it('normalizes 12-hour values without changing their meaning', async () => {
+    const { normalizeIdealTime } = await import('../src/utils/parameterUtils');
+    expect(normalizeIdealTime('9:00 am')).toBe('9:00 am');
+    expect(normalizeIdealTime('09:30 PM')).toBe('9:30 pm');
+    expect(normalizeIdealTime(' 12:00am ')).toBe('12:00 am');
+  });
+
+  it('rejects values Motion cannot accept', async () => {
+    const { normalizeIdealTime } = await import('../src/utils/parameterUtils');
+    for (const bad of ['09:15', '24:00', '13:00 pm', '0:00 am', 'nine', '9am', '']) {
+      expect(() => normalizeIdealTime(bad), bad).toThrow(/idealTime/);
+    }
+  });
+});

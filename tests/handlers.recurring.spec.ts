@@ -153,12 +153,66 @@ describe('RecurringTaskHandler', () => {
       expect(motionService.createRecurringTask).toHaveBeenCalledWith(expect.objectContaining({
         name: 'Full Task',
         description: 'Daily task description',
-        projectId: 'proj1',
         deadlineType: 'HARD',
         duration: 30,
         priority: 'HIGH',
+        idealTime: '9:00 am',
       }));
       expect(res.isError).toBeFalsy();
+    });
+
+    it('does not forward projectId, and says so in the response', async () => {
+      const { ctx, motionService } = makeContext();
+      const handler = new RecurringTaskHandler(ctx);
+
+      const res = await handler.handle({
+        operation: 'create',
+        name: 'With project',
+        workspaceId: 'ws1',
+        assigneeId: 'user1',
+        frequency: { type: 'daily' },
+        projectId: 'proj1',
+      });
+
+      const sent = motionService.createRecurringTask.mock.calls[0][0];
+      expect(sent).not.toHaveProperty('projectId');
+      expect(res.isError).toBeFalsy();
+      expect((res.content[0] as { text: string }).text).toContain('projectId was not sent');
+    });
+
+    it('leaves a 12-hour idealTime unchanged and adds no note', async () => {
+      const { ctx, motionService } = makeContext();
+      const handler = new RecurringTaskHandler(ctx);
+
+      const res = await handler.handle({
+        operation: 'create',
+        name: 'Twelve hour',
+        workspaceId: 'ws1',
+        assigneeId: 'user1',
+        frequency: { type: 'daily' },
+        idealTime: '9:00 am',
+      });
+
+      expect(motionService.createRecurringTask.mock.calls[0][0].idealTime).toBe('9:00 am');
+      expect((res.content[0] as { text: string }).text).not.toContain('Note:');
+    });
+
+    it('rejects an idealTime Motion cannot accept before calling the API', async () => {
+      const { ctx, motionService } = makeContext();
+      const handler = new RecurringTaskHandler(ctx);
+
+      const res = await handler.handle({
+        operation: 'create',
+        name: 'Quarter past',
+        workspaceId: 'ws1',
+        assigneeId: 'user1',
+        frequency: { type: 'daily' },
+        idealTime: '09:15',
+      });
+
+      expect(res.isError).toBe(true);
+      expect((res.content[0] as { text: string }).text).toContain('minutes must be 00 or 30');
+      expect(motionService.createRecurringTask).not.toHaveBeenCalled();
     });
 
     it('preserves duration 0 in create payload', async () => {

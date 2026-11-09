@@ -420,7 +420,7 @@ export function formatRecurringTaskList(tasks: MotionRecurringTask[], truncation
 /**
  * Format single recurring task response
  */
-export function formatRecurringTaskDetail(task: MotionRecurringTask): CallToolResult {
+export function formatRecurringTaskDetail(task: MotionRecurringTask, notes: string[] = []): CallToolResult {
   const details = [
     `Recurring task created successfully:`,
     `- ID: ${task.id}`,
@@ -431,7 +431,8 @@ export function formatRecurringTaskDetail(task: MotionRecurringTask): CallToolRe
     task.project ? `- Project: ${task.project.name} (${task.project.id})` : `- Project: No project assigned`,
     task.assignee ? `- Assignee: ${task.assignee.name} (${task.assignee.email})` : null,
     `- Status: ${typeof task.status === 'string' ? task.status : task.status?.name || 'Unknown'}`,
-    (task.labels && task.labels.length > 0) ? `- Labels: ${task.labels.map(l => typeof l === 'string' ? l : l.name).join(', ')}` : null
+    (task.labels && task.labels.length > 0) ? `- Labels: ${task.labels.map(l => typeof l === 'string' ? l : l.name).join(', ')}` : null,
+    ...notes.map(note => `- Note: ${note}`)
   ].filter(Boolean).join('\n');
   
   return formatMcpSuccess(details);

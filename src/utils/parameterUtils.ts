@@ -344,3 +344,45 @@ export function parseAndValidateWorkspace(
   
   return workspaceParams;
 }
+
+/**
+ * Normalize a recurring task's idealTime to the form Motion's API accepts.
+ *
+ * Motion's docs describe idealTime as "HH:mm", but POST /recurring-tasks rejects
+ * 24-hour values with 400: "idealTime should be in the form of HH:00|30 am|pm.
+ * Ex: 12:30 am OR 8:00 am" (observed 2026-11-09). Accepts either a 12-hour value
+ * ("9:00 am", "09:30 PM") or a 24-hour value ("09:00", "21:30") and returns the
+ * 12-hour form without a leading zero. Minutes must be 00 or 30.
+ *
+ * @throws {ValidationError} when the value cannot be expressed in that form
+ */
+export function normalizeIdealTime(value: string): string {
+  const input = value.trim();
+  const fail = (): never => {
+    throw new ValidationError(
+      `idealTime "${value}" is not valid. Use 12-hour "h:mm am" or "h:mm pm" (e.g. "9:00 am") ` +
+      `or 24-hour "HH:mm" (e.g. "09:00"); minutes must be 00 or 30.`,
+      'idealTime'
+    );
+  };
+
+  const twelve = /^(\d{1,2}):(\d{2})\s*([ap]m)$/i.exec(input);
+  if (twelve) {
+    const [, hourText = '', minutes = '', meridiem = ''] = twelve;
+    const hour = Number(hourText);
+    if (hour < 1 || hour > 12 || (minutes !== '00' && minutes !== '30')) fail();
+    return `${hour}:${minutes} ${meridiem.toLowerCase()}`;
+  }
+
+  const twentyFour = /^(\d{1,2}):(\d{2})$/.exec(input);
+  if (twentyFour) {
+    const [, hourText = '', minutes = ''] = twentyFour;
+    const hour = Number(hourText);
+    if (hour > 23 || (minutes !== '00' && minutes !== '30')) fail();
+    const suffix = hour < 12 ? 'am' : 'pm';
+    const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+    return `${hour12}:${minutes} ${suffix}`;
+  }
+
+  return fail();
+}

@@ -387,7 +387,7 @@ export const recurringTasksToolDefinition: McpToolDefinition = {
       },
       projectId: {
         type: "string",
-        description: "Project ID."
+        description: "Not supported: Motion does not accept a project on a recurring task. Ignored if sent; the response says so."
       },
       assigneeId: {
         type: "string",
@@ -454,7 +454,7 @@ export const recurringTasksToolDefinition: McpToolDefinition = {
       },
       idealTime: {
         type: "string",
-        description: "Ideal time in HH:mm format"
+        description: "Ideal time. Motion requires the 12-hour form 'h:mm am' or 'h:mm pm' with minutes 00 or 30 (e.g. '9:00 am'); a 24-hour 'HH:mm' value on the hour or half hour is converted."
       },
       schedule: {
         type: "string",
