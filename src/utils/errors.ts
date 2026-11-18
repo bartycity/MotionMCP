@@ -274,6 +274,11 @@ function buildUserMessage(
     if (statusCode === 404 && apiMessage) {
       return `Unable to ${action} ${resource}${resourceInfo}. ${apiMessage}`;
     }
+    // For validation failures, append Motion's own reason. The generic text
+    // alone hides which field was rejected, so the caller cannot correct the call.
+    if ((statusCode === 400 || statusCode === 422) && apiMessage) {
+      return `Unable to ${action} ${resource}${resourceInfo}. ${STATUS_CODE_MESSAGES[statusCode]} Motion said: ${apiMessage}`;
+    }
     return `Unable to ${action} ${resource}${resourceInfo}. ${STATUS_CODE_MESSAGES[statusCode]}`;
   }
 
@@ -297,6 +302,21 @@ function buildUserMessage(
 }
 
 /**
+ * Motion returns validation failures as either a string or an array of strings
+ * (one per rejected field). Reduce both to a single string; anything else is dropped.
+ */
+export function normalizeApiMessage(raw: unknown): string | undefined {
+  if (typeof raw === 'string') {
+    return raw.trim() || undefined;
+  }
+  if (Array.isArray(raw)) {
+    const parts = raw.filter((m): m is string => typeof m === 'string' && m.trim() !== '');
+    return parts.length > 0 ? parts.join('; ') : undefined;
+  }
+  return undefined;
+}
+
+/**
  * Creates a user-facing error with both user-friendly and technical messages
  */
 export function createUserFacingError(
@@ -312,7 +332,7 @@ export function createUserFacingError(
 
   if (isAxiosError(error)) {
     statusCode = error.response?.status;
-    apiMessage = error.response?.data?.message;
+    apiMessage = normalizeApiMessage(error.response?.data?.message);
   }
 
   // Build user-friendly message

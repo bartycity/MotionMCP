@@ -2,7 +2,7 @@ import { BaseHandler } from './base/BaseHandler';
 import { McpToolResponse } from '../types/mcp';
 import { MotionRecurringTasksArgs } from '../types/mcp-tool-args';
 import { CreateRecurringTaskData, FrequencyObject } from '../types/motion';
-import { formatRecurringTaskList, formatRecurringTaskDetail, formatMcpSuccess, parseObjectParam, parseDurationValue } from '../utils';
+import { formatRecurringTaskList, formatRecurringTaskDetail, formatMcpSuccess, parseObjectParam, parseDurationValue, normalizeIdealTime } from '../utils';
 
 export class RecurringTaskHandler extends BaseHandler {
   async handle(args: MotionRecurringTasksArgs): Promise<McpToolResponse> {
@@ -59,6 +59,10 @@ export class RecurringTaskHandler extends BaseHandler {
       validatedDuration = parseDurationValue(args.duration, ['REMINDER']) as number | 'REMINDER';
     }
 
+    // Motion requires a 12-hour idealTime ("9:00 am"); convert 24-hour input,
+    // and fail here with a clear message rather than with Motion's 400.
+    const idealTime = args.idealTime ? normalizeIdealTime(args.idealTime) : undefined;
+
     const workspace = await this.workspaceResolver.resolveWorkspace({
       workspaceId: args.workspaceId,
       workspaceName: args.workspaceName
@@ -72,23 +76,33 @@ export class RecurringTaskHandler extends BaseHandler {
         ? (await this.motionService.getCurrentUser()).id
         : args.assigneeId!;
 
+    // Motion's POST /recurring-tasks rejects projectId with 400 ("property
+    // projectId should not exist", observed 2026-11-09). It is not forwarded;
+    // the response says so instead of dropping it silently.
+    const notes: string[] = [];
+    if (args.projectId) {
+      notes.push('projectId was not sent: Motion does not accept a project on a recurring task. The task has no project.');
+    }
+    if (idealTime && idealTime !== args.idealTime) {
+      notes.push(`idealTime sent as "${idealTime}" (Motion requires the 12-hour form).`);
+    }
+
     const taskData: CreateRecurringTaskData = {
       name: args.name,
       workspaceId: workspace.id,
       assigneeId: resolvedAssigneeId,
       frequency,
       ...(args.description && { description: args.description }),
-      ...(args.projectId && { projectId: args.projectId }),
       ...(args.deadlineType && { deadlineType: args.deadlineType }),
       ...(validatedDuration !== undefined && { duration: validatedDuration }),
       ...(args.startingOn && { startingOn: args.startingOn }),
-      ...(args.idealTime && { idealTime: args.idealTime }),
+      ...(idealTime && { idealTime }),
       ...(args.schedule && { schedule: args.schedule }),
       ...(args.priority && { priority: args.priority })
     };
 
     const newTask = await this.motionService.createRecurringTask(taskData);
-    return formatRecurringTaskDetail(newTask);
+    return formatRecurringTaskDetail(newTask, notes);
   }
 
   private async handleDelete(args: MotionRecurringTasksArgs): Promise<McpToolResponse> {
