@@ -45,6 +45,8 @@ MOTION_API_KEY=your_api_key npx motionmcp
 
 ### Remote Setup (Cloudflare Workers)
 
+> **Note (this fork):** the shared-secret auth documented below is upstream's design. This fork replaces it with OAuth 2.1 — see [Fork notes](#fork-notes) at the bottom.
+
 For mobile and web clients — Claude mobile/web, ChatGPT mobile/web, or any HTTP MCP client.
 
 #### One-click deploy
@@ -308,3 +310,18 @@ Apache-2.0 License
 ---
 
 For more information, see the full [Motion API docs](https://docs.usemotion.com/) or [Model Context Protocol docs](https://modelcontextprotocol.io/docs/).
+## Fork notes
+
+**Base:** upstream devondragon/MotionMCP tag `v2.10.0` (commit `d075c1b`, 24 Sep 2026), adopted Nov 2026. Earlier base: `c79dea5f` (2.8.0). Do not auto-update. Upstream releases are reviewed and adopted deliberately, never auto-merged.
+
+**Divergences from upstream:**
+
+1. **OAuth 2.1 replaces upstream's shared-secret auth.** The whole auth layer is one added file, `src/oauth.ts`, the Wrangler entry point. It wraps upstream's stateless MCP handler (`mcpTransport` in `worker.ts`) with [`@cloudflare/workers-oauth-provider`](https://github.com/cloudflare/workers-oauth-provider): Dynamic Client Registration at `/register`, a single-user consent screen at `/authorize` gated by the `MOTION_MCP_SECRET` password, token issue and refresh at `/token` (S256 PKCE, refresh rotation), tokens stored hashed in KV (`OAUTH_KV`). The MCP endpoint is plain `/mcp` behind bearer auth; upstream's `/mcp/SECRET` path and static Bearer secret are not reachable, because `worker.ts`'s default export is not the entry point. Motivation: a secret in a URL is shown by any client that renders connector details (one exposure, Aug 2026), and a static secret never expires.
+   - **Sign-in lifetime:** `refreshTokenTTL` is 180 days (library default 30, counted from sign-in and never extended by refresh), and dynamically registered clients do not expire (library default 90 days). Changed Nov 2026 so connectors stop asking to sign in again every month. Applies to sign-ins made after the change.
+2. **Tool tier:** `MOTION_MCP_TOOLS = "complete"` (all 10 tools); upstream's `wrangler.toml` defaults to `essential`.
+3. **Observability:** `[observability]` enabled with `head_sampling_rate = 1`, so every request is logged and a write's outcome can be checked after a client disconnect.
+4. **Recurring-task create follows what Motion's API accepts, and a 400 carries Motion's own reason** (Nov 2026). `POST /recurring-tasks` rejects `projectId` ("property projectId should not exist") and a 24-hour `idealTime` (it wants `h:mm am|pm`, minutes 00 or 30), although Motion's docs and the upstream tool schema say otherwise. The handler no longer forwards `projectId` and says so in the response, converts a 24-hour `idealTime`, and rejects a value Motion cannot accept before calling the API. Separately, `buildUserMessage` appends Motion's `message` (string or array) to 400 and 422 errors for every tool. Not in upstream as of v2.10.0; a candidate to offer upstream.
+5. **Durable Object retirement is staged** (Nov 2026). Upstream's v2.10.0 `wrangler.toml` deletes the `MotionMCPAgent` class (migration tag `v2`). This fork first deploys without that migration, keeping the binding and a stub class, so a rollback to the pre-upgrade version stays possible; Cloudflare refuses a rollback across a Durable Object class change. The `v2` delete migration ships later as its own deploy.
+
+Divergences retired by this upgrade, now in upstream: the timestamp fix (fork `566d4cb`, upstream `451ddb6`), streamable-HTTP transport, AJV removal from the Worker path, and the `new_sqlite_classes` migration.
+

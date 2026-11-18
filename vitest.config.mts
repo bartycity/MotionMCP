@@ -24,7 +24,11 @@ export default defineConfig({
             miniflare: {
               bindings: {
                 MOTION_API_KEY: 'test-motion-api-key',
-                MOTION_MCP_SECRET: 'test-worker-secret'
+                MOTION_MCP_SECRET: 'test-worker-secret',
+                // FORK: wrangler.toml sets the complete tier (divergence 2).
+                // Upstream's worker tests assert upstream's default, essential,
+                // so pin it here; tests/worker/oauth.spec.ts checks complete.
+                MOTION_MCP_TOOLS: 'essential'
               }
             }
           })

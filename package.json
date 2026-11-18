@@ -36,6 +36,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@cloudflare/workers-oauth-provider": "0.10.1",
     "@modelcontextprotocol/sdk": "1.30.0",
     "@modelcontextprotocol/server": "2.0.0",
     "agents": "^0.21.0",

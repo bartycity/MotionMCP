@@ -83,8 +83,12 @@ describe("worker auth", () => {
       );
     });
 
-    it("binds no Durable Object: the MCP transport is stateless (issue #158)", () => {
-      expect((testEnv as unknown as Record<string, unknown>).MCP_OBJECT).toBeUndefined();
+    // FORK (divergence 5, staged Durable Object retirement): the binding and an
+    // inert stub class stay for the first v2.10.0 deploy so a rollback stays
+    // allowed. Restore upstream's assertion (toBeUndefined) in the deploy that
+    // adds the v2 deleted_classes migration.
+    it("keeps the retired Durable Object binding until the staged delete deploy", () => {
+      expect((testEnv as unknown as Record<string, unknown>).MCP_OBJECT).toBeDefined();
     });
   });
 
