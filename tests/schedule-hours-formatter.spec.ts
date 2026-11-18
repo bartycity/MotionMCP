@@ -25,7 +25,9 @@ describe('formatScheduleList working hours', () => {
     expect(out).toContain('Work hours (America/Denver)');
     expect(out).toContain('Mon 09:00-17:00');
     expect(out).toContain('Fri 09:00-12:00');
-    expect(out).not.toContain('Wed'); // no wednesday slot
+    // No Wednesday slot. Match the slot shape, not the bare word: the list header
+    // carries today's weekday, so a bare 'Wed' check fails on Wednesdays.
+    expect(out).not.toMatch(/Wed \d{2}:\d{2}/);
   });
 
   it('joins multiple slots in a day with a slash', () => {
