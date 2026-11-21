@@ -33,30 +33,12 @@ import {
   type AuthRequest,
   type OAuthHelpers,
 } from "@cloudflare/workers-oauth-provider";
-import { DurableObject } from "cloudflare:workers";
 import { mcpTransport } from "./worker";
-
-/**
- * Retired Durable Object class, kept as an inert stub.
- *
- * Upstream v2.10.0 dropped the McpAgent transport and deletes this class with
- * a `deleted_classes` migration. This fork stages that: the first v2.10.0
- * deploy keeps the class and its binding, so no Durable Object migration runs
- * and a rollback to the pre-upgrade version (which still uses the class)
- * stays allowed. Nothing routes to it. Remove it, the binding and add the
- * `v2` migration together, as one deploy, once the upgrade has soaked.
- */
-export class MotionMCPAgent extends DurableObject {
-  async fetch(): Promise<Response> {
-    return new Response("Gone", { status: 410 });
-  }
-}
 
 interface Env {
   MOTION_API_KEY: string;
   MOTION_MCP_SECRET: string;
   MOTION_MCP_TOOLS?: string;
-  MCP_OBJECT: DurableObjectNamespace; // retired; see MotionMCPAgent stub
   OAUTH_KV: KVNamespace;
   OAUTH_PROVIDER: OAuthHelpers;
 }

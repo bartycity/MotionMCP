@@ -6,20 +6,18 @@ main = "src/oauth.ts"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat"]
 
-# STAGED RETIREMENT (fork divergence 5). Upstream v2.10.0 removes this binding
-# and adds migration tag "v2" with deleted_classes = ["MotionMCPAgent"]. This
-# deploy keeps the binding and an inert stub class (src/oauth.ts) so no
-# Durable Object migration runs and Cloudflare still allows a rollback to the
-# pre-upgrade version. A later, separate deploy removes the binding and stub
-# and adds the v2 migration. Do not add it alongside other changes.
-[durable_objects]
-bindings = [
-  { name = "MCP_OBJECT", class_name = "MotionMCPAgent" }
-]
-
+# The MCP transport is stateless (createMcpHandler): no Durable Object is
+# bound. The v1 migration created the MotionMCPAgent class for the retired
+# McpAgent transport; v2 deletes it (fork divergence 5, Deploy B, 21 Nov 2026).
+# Both tags must stay in place so Wrangler can replay the history on a fresh
+# deploy. Cloudflare refuses a rollback to any version before the v2 deploy.
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["MotionMCPAgent"]
+
+[[migrations]]
+tag = "v2"
+deleted_classes = ["MotionMCPAgent"]
 
 [vars]
 MOTION_MCP_TOOLS = "complete"
